@@ -8,7 +8,7 @@ import { authProvider } from "@/lib/auth-provider";
 import { greyOrangeEmailErrorMessage, isGreyOrangeEmail, normalizeEmail } from "@/lib/email-validation";
 import PasswordField from "@/components/auth/PasswordField";
 import { apiUrl } from "@/lib/api";
-const TEAM_OPTIONS = ['TAC','Change Management','Client Director','CEM','CAC','IM','Management','Project Manager','Solution Integration'];
+const TEAM_OPTIONS = ['Admin','Dematic Learner'];
 
 export default function SignupPage() {
   const router = useRouter();
@@ -42,8 +42,8 @@ export default function SignupPage() {
       return;
     }
 
-    if (!password || password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    if (!password || password.length < 8) {
+      setError("Password must be at least 8 characters long.");
       return;
     }
 
@@ -213,7 +213,7 @@ export default function SignupPage() {
               value={password}
               onChange={setPassword}
               autoComplete="new-password"
-              minLength={6}
+              minLength={8}
               required
             />
 

@@ -41,8 +41,9 @@ type CreateBody = {
 /**
  * POST /api/postgres/users
  *
- * Admin-driven user creation. TODO: hash the password and store the
- * credential once in-app auth exists; for now only the profile is created.
+ * Admin-driven user creation: creates the profile, then stores the hashed
+ * credential via the backend. The admin-chosen password is treated as temporary
+ * (the user must change it on first sign-in).
  */
 export async function POST(request: Request) {
   try {
@@ -67,9 +68,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters long." },
+        { error: "Password must be at least 8 characters long." },
         { status: 400 }
       );
     }
@@ -88,6 +89,10 @@ export async function POST(request: Request) {
     const uid = crypto.randomUUID();
 
     await createUserProfile({ uid, name, email, team, role, allowedLevel, allowedLevelSource: "team" });
+    await dataRequest("/api/auth/credentials", {
+      method: "POST",
+      body: JSON.stringify({ userId: uid, password, mustChangePassword: true }),
+    });
 
     return NextResponse.json({ ok: true, uid }, { status: 201 });
   } catch (error) {

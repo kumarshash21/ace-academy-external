@@ -1230,6 +1230,7 @@ input,textarea,select{font-family:'Plus Jakarta Sans',sans-serif}
       <button class="btn-login" onclick="doLogin()">Sign In to ACE Academy →</button>
       <div class="login-footnote">
         <a href="/ace_academy/signup" target="_top">Don't have an account? Create one</a>
+        <br><a href="/ace_academy/forgot-password" target="_top">Forgot password?</a>
       </div>
     </div>
   </div>
@@ -1284,6 +1285,7 @@ input,textarea,select{font-family:'Plus Jakarta Sans',sans-serif}
         <button class="btn-login" onclick="doLogin()">Sign In to ACE Academy</button>
         <div style="margin-top:20px; text-align:center; font-size:12px;">
           <a href="/ace_academy/signup" target="_top" style="color:var(--purple-l); font-weight:500; text-decoration:underline; transition:color 0.2s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--purple-l)'">Don't have an account? Create one</a>
+          <br><a href="/ace_academy/forgot-password" target="_top" style="color:var(--purple-l); font-weight:500; text-decoration:underline; display:inline-block; margin-top:10px;">Forgot password?</a>
         </div>
       </div>
     </div>
@@ -1554,10 +1556,6 @@ input,textarea,select{font-family:'Plus Jakarta Sans',sans-serif}
 </div>
 
 <div class="toast" id="toast"></div>
-
-<!-- Firebase Auth (compat SDK for legacy script) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 
 <script>
 // ════════════════════════════════════════
@@ -2322,35 +2320,15 @@ let modalCorrect=0;
 let activeAsm=null,curQ=0,answers=[],timerInt=null,timeLeft=0;
 
 // ════════════════════════════════════════
-// FIREBASE AUTH
+// SESSION AUTH (httpOnly cookie issued by /api/auth/login)
 // ════════════════════════════════════════
-// Fill with your Firebase project's web app config.
-// If left blank, login falls back to legacy local user/password auth.
-const FIREBASE_CONFIG={
-  apiKey: "AIzaSyA2VT9SD0dOg38Rev4H256F9JMxcBx8xLs",
-  authDomain: "ace-academy-f0bc5.firebaseapp.com",
-  projectId: "ace-academy-f0bc5",
-  storageBucket: "ace-academy-f0bc5.firebasestorage.app",
-  messagingSenderId: "951209070714",
-  appId: "1:951209070714:web:60deca91fe523414a82bc3",
-  measurementId: "G-GB8X2Z35NR"
-};
-let fbAuth=null;
-try{
-  if(FIREBASE_CONFIG.apiKey&&FIREBASE_CONFIG.authDomain&&FIREBASE_CONFIG.projectId&&FIREBASE_CONFIG.appId){
-    firebase.initializeApp(FIREBASE_CONFIG);
-    fbAuth=firebase.auth();
-  }
-}catch(e){
-  console.warn('initialization failed; using legacy auth.',e);
-  fbAuth=null;
-}
+const AUTH_BASE='/ace_academy/api/auth';
 
 function mkFallbackUserForFirebase(fbUser){
   const email=(fbUser&&fbUser.email||'').toLowerCase();
   const local=gUsers().find(u=>u.email.toLowerCase()===email);
   if(local) return local;
-  const nameBase=(fbUser&&fbUser.displayName)||email.split('@')[0]||'Learner';
+  const nameBase=(fbUser&&fbUser.name)||email.split('@')[0]||'Learner';
   const av=(nameBase.split(/\s+/).map(s=>s[0]||'').join('').slice(0,2)||'LN').toUpperCase();
   return {
     id:`fb_${fbUser.uid.slice(0,8)}`,
@@ -2476,47 +2454,70 @@ async function doLogin(){
     return;
   }
 
-  if(fbAuth){
-    try{
-      const cred=await fbAuth.signInWithEmailAndPassword(em,pw);
-      CU=await hydrateUserFromFirestore(cred.user);
-      CU.loginAt=Date.now();
-      saveSessionUser(CU);
-      document.getElementById('loginScreen').style.display='none';
-      initApp();
+  let data;
+  try{
+    const res=await fetch(`${AUTH_BASE}/login`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:em,password:pw})
+    });
+    data=await res.json().catch(()=>({}));
+    if(!res.ok){
+      showLoginError(data.error||'Incorrect email or password. Please try again.');
       return;
     }
-     catch(err) {
-    console.error("Detailed Login Exception:", err); // Clear visual diagnostic log
-    const code = (err && err.code) || '';
-    
-    if(code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
-      showLoginError('Invalid credentials. Please check your email/password.');
-    } else if(code === 'auth/too-many-requests') {
-      showLoginError('Too many failed attempts. Please try again later.');
-    } else {
-      // Show the actual error message or code to help pinpoint runtime crashes
-      showLoginError(`Application Error: ${err.message || err.code || err}`);
-    }
+  }catch(err){
+    console.error('Login request failed:',err);
+    showLoginError('Unable to reach the server. Please try again.');
     return;
   }
-  }
 
-  const allUsers=gUsers();
-  const u=allUsers.find(x=>x.email.toLowerCase()===em&&x.password===pw);
-  if(!u){showLoginError('Incorrect email or password. Please try again.');return}
-  CU=u;
+  CU=await hydrateUserFromFirestore(data.user);
   CU.loginAt=Date.now();
   saveSessionUser(CU);
   document.getElementById('loginScreen').style.display='none';
   initApp();
+  if(data.mustChangePassword) promptPasswordChange(pw);
 }
+
+// Forced on first sign-in after an admin/seeded temporary password.
+function promptPasswordChange(currentPw){
+  if(document.getElementById('pwChangeOverlay')) return;
+  const o=document.createElement('div');
+  o.id='pwChangeOverlay';
+  o.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center';
+  o.innerHTML=`<div style="background:var(--surface,#1a1a2e);color:var(--text,#fff);padding:28px;border-radius:14px;width:min(380px,92vw)">
+    <h3 style="margin:0 0 6px">Set a new password</h3>
+    <p style="margin:0 0 14px;font-size:13px;opacity:.8">You signed in with a temporary password. Choose a new one (at least 8 characters) to continue.</p>
+    <div id="pwChangeErr" style="display:none;color:#f87171;font-size:13px;margin-bottom:10px"></div>
+    <input type="password" id="pwNew" placeholder="New password" autocomplete="new-password" style="width:100%;margin-bottom:10px;padding:10px;border-radius:8px;box-sizing:border-box">
+    <input type="password" id="pwNew2" placeholder="Confirm new password" autocomplete="new-password" style="width:100%;margin-bottom:14px;padding:10px;border-radius:8px;box-sizing:border-box">
+    <button class="btn-login" id="pwChangeBtn" type="button">Update password</button>
+  </div>`;
+  document.body.appendChild(o);
+  const err=msg=>{const e=document.getElementById('pwChangeErr');e.textContent=msg;e.style.display='block'};
+  document.getElementById('pwChangeBtn').onclick=async()=>{
+    const n1=document.getElementById('pwNew').value,n2=document.getElementById('pwNew2').value;
+    if(n1.length<8) return err('Password must be at least 8 characters.');
+    if(n1!==n2) return err('Passwords do not match.');
+    try{
+      const res=await fetch(`${AUTH_BASE}/change-password`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({currentPassword:currentPw,newPassword:n1})
+      });
+      const d=await res.json().catch(()=>({}));
+      if(!res.ok) return err(d.error||'Unable to change password.');
+      o.remove();
+      toast('Password updated ✓','ok');
+    }catch(_e){err('Unable to reach the server. Please try again.')}
+  };
+}
+
 async function doLogout(){
   CU=null;
   clearSavedSession();
-  if(fbAuth){
-    try{await fbAuth.signOut()}catch(_e){}
-  }
+  try{await fetch(`${AUTH_BASE}/logout`,{method:'POST'})}catch(_e){}
   // Always hide admin-only sidebar items so they never persist for next login
   document.getElementById('adminSec').style.display='none';
   document.getElementById('n-admin').style.display='none';
@@ -2541,6 +2542,8 @@ const restoredUser=loadSavedSession();
 if(restoredUser){
   CU=restoredUser;
   document.getElementById('loginScreen').style.display='none';
+  // The cookie is the source of truth; drop the cached user if it's gone/expired.
+  fetch(`${AUTH_BASE}/me`).then(r=>{if(r.status===401) doLogout()}).catch(()=>{});
   // Defer boot until the whole script has executed, otherwise rDash()→rRankings()
   // runs before RANK_STATE/RANK_TEAM_TOUCHED (declared later) are initialized,
   // throwing a TDZ ReferenceError that silently leaves the ranking lists empty.

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { VALID_QUIZ_IDS } from "@/lib/assessment-mapping";
 import { dataRequest } from "@/lib/data-client";
+import { forbidUnlessSelfOrAdmin } from "@/lib/server-session";
 
 type SubmitBody = {
   uid?: string;
@@ -20,6 +21,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const denied = await forbidUnlessSelfOrAdmin(uid);
+    if (denied) return denied;
 
     if (!VALID_QUIZ_IDS.includes(quizId)) {
       return NextResponse.json({ error: `Invalid quizId: ${quizId}` }, { status: 400 });

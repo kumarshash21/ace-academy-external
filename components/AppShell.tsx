@@ -228,6 +228,16 @@ export default function AppShell({ children, currentTab }: AppShellProps) {
       cachedUser = normalized;
       setUser(normalized);
       setIsCheckingAuth(false);
+      // The httpOnly cookie is the source of truth; the localStorage copy is just a display cache.
+      fetch(apiUrl("/api/auth/me"))
+        .then((res) => {
+          if (res.status !== 401) return;
+          cachedUser = null;
+          localStorage.removeItem('ace2_session_user');
+          setUser(null);
+          router.push("/");
+        })
+        .catch(() => {});
     } else {
       cachedUser = null;
       // Only redirect if they aren't already on the base login page "/"
@@ -300,9 +310,14 @@ export default function AppShell({ children, currentTab }: AppShellProps) {
 
   const hrefFor = (tabName: string) => (tabName === "dash" ? "/" : `/${tabName}`);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     cachedUser = null;
     localStorage.removeItem('ace2_session_user');
+    try {
+      await fetch(apiUrl("/api/auth/logout"), { method: "POST" });
+    } catch {
+      // Cookie expires on its own; proceed to the login page regardless.
+    }
     router.push("/");
   };
 

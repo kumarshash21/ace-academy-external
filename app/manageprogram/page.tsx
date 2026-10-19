@@ -207,6 +207,11 @@ export default function ManageProgram() {
   const [uTeam, setUTeam] = useState(TEAM_OPTIONS[0]);
   const [uRole, setURole] = useState<'admin' | 'learner'>('learner');
 
+  // Password-reset requests (admin-assisted "forgot password")
+  const [resetRequests, setResetRequests] = useState<{ id: string; userId: string; name: string; email: string; requestedAt: string }[]>([]);
+  const [resetPasswords, setResetPasswords] = useState<Record<string, string>>({});
+  const [resetBusyId, setResetBusyId] = useState<string | null>(null);
+
   // --- FUNCTIONAL TRAINING STATE (team -> topics -> modules) ---
   const [ftTopics, setFtTopics] = useState<FunctionalTrainingTopic[]>([]);
   const [ftLoading, setFtLoading] = useState<boolean>(false);
@@ -298,6 +303,19 @@ export default function ManageProgram() {
       setSylLoading(true);
       try {
         const response = await fetch(apiUrl(`/api/postgres/syllabus/${admProd}`));
+        if (response.status === 404) {
+          // Course not created yet: start from an empty skeleton so topics/modules can be added.
+          // The first save creates the course (the backend upserts it).
+          const product = PRODUCTS.find((p) => p.id === admProd);
+          setCurrentSyllabusData({
+            id: admProd,
+            name: product?.name ?? admProd,
+            sub: 'Operational Toolkit',
+            icon: product?.icon ?? '',
+            levels: (product?.certs ?? []).map((c) => ({ name: CMETA[c].name, topics: [] })),
+          } as AdminSyllabusPayload);
+          return;
+        }
         if (!response.ok) throw new Error("Failed to pull dynamic backend syllabus schema.");
         const data: AdminSyllabusPayload = await response.json();
         setCurrentSyllabusData(data);
@@ -955,8 +973,44 @@ export default function ManageProgram() {
     }
   };
 
+  const fetchResetRequests = async () => {
+    try {
+      const response = await fetch(apiUrl('/api/postgres/password-resets'));
+      if (!response.ok) return;
+      const data = await response.json();
+      setResetRequests(Array.isArray(data.requests) ? data.requests : []);
+    } catch {
+      // Non-critical panel; leave the list as-is.
+    }
+  };
+
+  const handleResolveReset = async (id: string) => {
+    const password = resetPasswords[id] ?? '';
+    if (password.length < 8) return showAlert('Temporary password must be at least 8 characters.', 'error');
+    setResetBusyId(id);
+    try {
+      const response = await fetch(apiUrl('/api/postgres/password-resets'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `Server responded with status ${response.status}`);
+      showAlert('Temporary password set. Share it with the user — they must change it at next sign-in.', 'success');
+      setResetPasswords((prev) => ({ ...prev, [id]: '' }));
+      await fetchResetRequests();
+    } catch (err: any) {
+      showAlert(`Failed to reset password: ${err.message}`, 'error');
+    } finally {
+      setResetBusyId(null);
+    }
+  };
+
   useEffect(() => {
-    if (activeTab === 'users') fetchUsers();
+    if (activeTab === 'users') {
+      fetchUsers();
+      fetchResetRequests();
+    }
   }, [activeTab]);
 
   const getInitials = (name: string): string =>
@@ -997,7 +1051,7 @@ export default function ManageProgram() {
 
     if (userModalMode === 'add') {
       if (!uEmail.trim()) return showAlert('Please enter an email address.', 'error');
-      if (!uPassword || uPassword.length < 6) return showAlert('Password must be at least 6 characters.', 'error');
+      if (!uPassword || uPassword.length < 8) return showAlert('Password must be at least 8 characters.', 'error');
     }
 
     setUserSaving(true);
@@ -1806,6 +1860,29 @@ export default function ManageProgram() {
         {/* ──────────────── USER MANAGEMENT ──────────────── */}
         {activeTab === 'users' && (
           <div id="adminUsers">
+            {resetRequests.length > 0 && (
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px 20px', marginBottom: '24px' }}>
+                <div style={{ fontWeight: 700, marginBottom: '12px' }}>🔑 Password reset requests ({resetRequests.length})</div>
+                {resetRequests.map((r) => (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', padding: '8px 0', borderTop: '1px solid var(--border)' }}>
+                    <div style={{ flex: '1 1 220px' }}>
+                      <div style={{ fontWeight: 600 }}>{r.name}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text3)' }}>{r.email} · {new Date(r.requestedAt).toLocaleString()}</div>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Temporary password (min 8)"
+                      value={resetPasswords[r.id] ?? ''}
+                      onChange={(e) => setResetPasswords((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                      style={{ flex: '1 1 200px', padding: '8px 10px' }}
+                    />
+                    <button className="btn-login" type="button" disabled={resetBusyId === r.id} onClick={() => handleResolveReset(r.id)} style={{ width: 'auto', padding: '8px 16px', marginTop: 0 }}>
+                      {resetBusyId === r.id ? 'Saving...' : 'Set password'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             {usersLoading ? (
               <div className="empty"><p>Loading the user registry...</p></div>
             ) : usersError ? (
@@ -2441,36 +2518,12 @@ export default function ManageProgram() {
                       style={{ width: '100%', fontFamily: 'monospace', fontSize: '13px' }}
                       value={uPassword}
                       onChange={(e) => setUPassword(e.target.value)}
-                      placeholder="At least 6 characters"
+                      placeholder="At least 8 characters"
                     />
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', color: 'var(--text2)' }}>Team</label>
-                    <select
-                      value={uTeam}
-                      onChange={(e) => setUTeam(e.target.value)}
-                      style={{ background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid var(--border)', padding: '8px 10px', borderRadius: '4px', width: '100%' }}
-                    >
-                      {TEAM_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', color: 'var(--text2)' }}>Role</label>
-                    <select
-                      value={uRole}
-                      onChange={(e) => setURole(e.target.value as 'admin' | 'learner')}
-                      style={{ background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid var(--border)', padding: '8px 10px', borderRadius: '4px', width: '100%' }}
-                    >
-                      <option value="learner">◎ Learner</option>
-                      <option value="admin">⚙ Admin</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
                   <button type="button" className="btn-edit" onClick={() => setIsUserModalOpen(false)}>Cancel</button>
                   <button type="submit" className="btn-add" disabled={userSaving} style={{ backgroundColor: 'var(--purple)', borderColor: 'var(--purple)', color: '#fff', boxShadow: 'none', opacity: userSaving ? 0.6 : 1 }}>
                     {userSaving ? 'Saving...' : userModalMode === 'add' ? 'Create User' : 'Save Changes'}

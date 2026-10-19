@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { dataRequest } from "@/lib/data-client";
+import { forbidUnlessSelfOrAdmin } from "@/lib/server-session";
 
 type ProgressUpdateBody = {
   uid: string;
@@ -16,6 +17,9 @@ export async function POST(request: Request) {
     if (!uid) {
       return NextResponse.json({ error: "uid is required." }, { status: 400 });
     }
+
+    const denied = await forbidUnlessSelfOrAdmin(uid);
+    if (denied) return denied;
 
     if (typeof moduleKey === "string" && moduleKey) {
       if (isDone) {

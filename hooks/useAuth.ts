@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { authProvider } from "@/lib/auth-provider";
-import { getUsersFromStorage, type User } from "@/lib/auth";
+import type { User } from "@/lib/auth";
 import { greyOrangeEmailErrorMessage, isGreyOrangeEmail, normalizeEmail } from "@/lib/email-validation";
 import { getCurrentLevelFromCerts } from "@/lib/certifications";
 import { apiUrl } from "@/lib/api";
@@ -84,8 +84,6 @@ export function useAuth() {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Seed users to localStorage on first load to preserve legacy behavior.
-    getUsersFromStorage();
     setIsReady(true);
   }, []);
 
