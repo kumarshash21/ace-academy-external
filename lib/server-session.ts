@@ -9,6 +9,13 @@ import {
   type SessionClaims,
 } from "@/lib/session-token";
 
+// Secure cookies are dropped by browsers on plain-HTTP origins (other than localhost).
+// Set SESSION_COOKIE_SECURE=false when serving over HTTP, e.g. the VM before HTTPS.
+function cookieSecure(): boolean {
+  const flag = process.env.SESSION_COOKIE_SECURE;
+  return flag ? flag === "true" : process.env.NODE_ENV === "production";
+}
+
 export async function getSessionUser(): Promise<SessionClaims | null> {
   const store = await cookies();
   return verifySessionToken(store.get(SESSION_COOKIE)?.value);
@@ -18,7 +25,7 @@ export async function setSessionCookie(claims: SessionClaims): Promise<void> {
   const store = await cookies();
   store.set(SESSION_COOKIE, await signSessionToken(claims), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieSecure(),
     sameSite: "lax",
     path: SESSION_COOKIE_PATH,
     maxAge: SESSION_MAX_AGE_SECONDS,
@@ -29,7 +36,7 @@ export async function clearSessionCookie(): Promise<void> {
   const store = await cookies();
   store.set(SESSION_COOKIE, "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieSecure(),
     sameSite: "lax",
     path: SESSION_COOKIE_PATH,
     maxAge: 0,

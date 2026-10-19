@@ -6,7 +6,7 @@ import { SignJWT, jwtVerify } from "jose";
 
 export const SESSION_COOKIE = "ace_session";
 export const SESSION_MAX_AGE_SECONDS = 24 * 60 * 60;
-export const SESSION_COOKIE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/ace_academy";
+export const SESSION_COOKIE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "/ace_academy_external";
 
 export type SessionClaims = {
   uid: string;

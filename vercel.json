@@ -2,7 +2,7 @@
   "redirects": [
     {
       "source": "/",
-      "destination": "/ace_academy",
+      "destination": "/ace_academy_external",
       "permanent": true
     }
   ]

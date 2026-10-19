@@ -2,7 +2,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-basePath: process.env.NEXT_PUBLIC_BASE_PATH || '/ace_academy',
+basePath: process.env.NEXT_PUBLIC_BASE_PATH || '/ace_academy_external',
 // `next dev`'s cross-origin protection only trusts "localhost" by default,
 // so browsing the dev server via a loopback alias like 127.0.0.1/127.0.2.2
 // gets its HMR websocket (and other same-origin requests) rejected with a
