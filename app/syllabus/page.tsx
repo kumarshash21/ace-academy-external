@@ -535,7 +535,7 @@ import { notifyDoneUpdated } from "@/lib/xp-streak";
 
 const COURSE_TABS = [
   { id: "rtp", name: "Ranger RTP", icon: "🤖", cssClass: "rtp" },
-  { id: "ttp", name: "Ranger TTP", icon: "📦", cssClass: "ttp" },
+  // { id: "ttp", name: "Ranger TTP", icon: "📦", cssClass: "ttp" },
   { id: "ril", name: "Ranger RIL", icon: "🚚", cssClass: "ril" },
   { id: "tools", name: "Tools & Techniques", icon: "🛠️", cssClass: "tools" },
 ];
@@ -601,6 +601,7 @@ export default function SyllabusPage() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
   const [hoveredModule, setHoveredModule] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState<number>(0);
 
   // Track completions globally across tabs and levels
   // Key format: "rtp-pathfinder::MOD_CODE" -> boolean
@@ -659,14 +660,20 @@ export default function SyllabusPage() {
 
   // Fetch API payload data mapping
   useEffect(() => {
+    let cancelled = false;
     async function fetchSyllabusData() {
       setIsLoading(true);
+      // Clear the previous course so a course with no syllabus (404) doesn't
+      // keep showing the last tab's modules.
+      setSyllabus(null);
       try {
         const response = await fetch(apiUrl(`/api/postgres/syllabus/${activeId}`));
+        if (cancelled) return;
         if (response.ok) {
           const data: SyllabusData = await response.json();
+          if (cancelled) return;
           setSyllabus(data);
-          
+
           if (data?.levels && data.levels.length > 0) {
             setActiveLevel(data.levels[0].name.toLowerCase().replace(/\s+/g, ""));
           }
@@ -674,12 +681,15 @@ export default function SyllabusPage() {
       } catch (err) {
         console.error("Error connecting with syllabus data tree:", err);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
     fetchSyllabusData();
     setExpandedModules({});
-  }, [activeId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [activeId, reloadKey]);
 
   // Recalculate segment metric counters whenever completions change
   useEffect(() => {
@@ -1008,10 +1018,56 @@ export default function SyllabusPage() {
             </div>
           ))}
         </div>
-      ) : (
+      ) : syllabus ? (
         <div className="empty">
           <div className="empty-ico">📂</div>
           <p>No content parameters mapped inside this certification index view.</p>
+        </div>
+      ) : (
+        <div className="syl-empty">
+          <style>{`
+            @keyframes sylFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+            @keyframes sylPulse { 0% { transform: scale(.9); opacity: .6; } 100% { transform: scale(1.5); opacity: 0; } }
+            .syl-empty { display:flex; flex-direction:column; align-items:center; text-align:center; padding:56px 24px; background:var(--surface); border:1px dashed var(--border2); border-radius:var(--r2); }
+            .syl-empty-orb { position:relative; width:96px; height:96px; display:flex; align-items:center; justify-content:center; font-size:44px; border-radius:50%; background:var(--purple-bg); margin-bottom:22px; animation:sylFloat 3.2s ease-in-out infinite; }
+            .syl-empty-orb::after { content:""; position:absolute; inset:0; border-radius:50%; border:2px solid var(--purple-l); animation:sylPulse 2.4s ease-out infinite; }
+            .syl-empty h3 { font-size:22px; font-weight:700; color:var(--text); margin:0 0 8px; }
+            .syl-empty p { max-width:440px; color:var(--text2); font-size:14px; line-height:1.6; margin:0 0 24px; }
+            .syl-empty-actions { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:28px; }
+            .syl-btn { cursor:pointer; font:inherit; font-size:13px; font-weight:600; padding:10px 18px; border-radius:var(--r); border:1px solid var(--border2); background:var(--surface2); color:var(--text); transition:transform .15s, background .15s, border-color .15s; }
+            .syl-btn:hover { transform:translateY(-2px); background:var(--surface3); border-color:var(--purple-l); }
+            .syl-btn.primary { background:var(--purple); border-color:var(--purple); color:#fff; }
+            .syl-btn.primary:hover { background:var(--purple-l); border-color:var(--purple-l); color:var(--bg); }
+            .syl-empty-hint { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--text3); margin-bottom:10px; }
+            .syl-chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+            .syl-chip { cursor:pointer; font:inherit; font-size:12px; padding:7px 14px; border-radius:999px; border:1px solid var(--border2); background:transparent; color:var(--text2); transition:all .15s; }
+            .syl-chip:hover { color:var(--text); border-color:var(--cyan-l); background:var(--cyan-bg); }
+          `}</style>
+          <div className="syl-empty-orb">{COURSE_TABS.find((t) => t.id === activeId)?.icon ?? "📚"}</div>
+          <h3>Oops! Looks like no data is uploaded yet</h3>
+          <p>
+            The curriculum for{" "}
+            <strong style={{ color: "var(--text)" }}>{COURSE_TABS.find((t) => t.id === activeId)?.name ?? activeId}</strong>{" "}
+            hasn&apos;t been published. Check back soon, or explore a course that&apos;s ready to learn.
+          </p>
+          <div className="syl-empty-actions">
+            {activeId !== "rtp" && (
+              <button type="button" className="syl-btn primary" onClick={() => setActiveId("rtp")}>
+                🚀 Start with Ranger RTP
+              </button>
+            )}
+            <button type="button" className="syl-btn" onClick={() => setReloadKey((k) => k + 1)}>
+              🔄 Refresh
+            </button>
+          </div>
+          <div className="syl-empty-hint">Or jump to another course</div>
+          <div className="syl-chips">
+            {COURSE_TABS.filter((t) => t.id !== activeId).map((t) => (
+              <button key={t.id} type="button" className="syl-chip" onClick={() => setActiveId(t.id)}>
+                {t.icon} {t.name}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </AppShell>

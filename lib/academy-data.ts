@@ -60,14 +60,14 @@ export const PRODUCTS: ProductSummary[] = [
     certs: ["pathfinder", "navigator", "grandmaster"],
     moduleCount: 41,
   },
-  {
-    id: "ttp",
-    name: "Ranger TTP",
-    sub: "Tote to Person",
-    icon: "📦",
-    certs: ["pathfinder", "navigator", "grandmaster"],
-    moduleCount: 12,
-  },
+  // {
+  //   id: "ttp",
+  //   name: "Ranger TTP",
+  //   sub: "Tote to Person",
+  //   icon: "📦",
+  //   certs: ["pathfinder", "navigator", "grandmaster"],
+  //   moduleCount: 12,
+  // },
   {
     id: "tools",
     name: "Tools & Techniques",
