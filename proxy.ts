@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/session-token";
 
 /**
- * Gate for every /api/postgres/* route (paths here are relative to basePath).
+ * Gate for every /api/postgres/* route (paths here are root-relative).
  *
  *  - /signup is public.
  *  - Everything else needs a valid session cookie.

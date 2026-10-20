@@ -1,6 +1,6 @@
 // Ensures user-entered links like "www.google.com" are treated as absolute
 // external URLs instead of paths relative to the current page (which would
-// resolve under the app's basePath, e.g. "/ace_academy_external/google.com").
+// resolve under the app's basePath, e.g. "/google.com").
 export function normalizeResourceUrl(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return trimmed;
