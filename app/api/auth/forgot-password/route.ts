@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as { email?: string };
   const email = body.email ? normalizeEmail(body.email) : "";
   if (!email || !isGreyOrangeEmail(email)) {
-    return NextResponse.json({ error: "Please enter your @greyorange.com email." }, { status: 400 });
+    return NextResponse.json({ error: "Please enter your @greyorange.com or @dematic.com email." }, { status: 400 });
   }
   try {
     await dataRequest("/api/auth/reset-requests", { method: "POST", body: JSON.stringify({ email }) });

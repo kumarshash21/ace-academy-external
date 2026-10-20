@@ -202,7 +202,7 @@ export default function SignupPage() {
                 required
               />
               {/* <p style={{ marginTop: "6px", fontSize: "12px", color: "#8a95a8" }}>
-                GreyOrange organization email only (@greyorange.com)
+                GreyOrange or Dematic organization email only (@greyorange.com, @dematic.com)
               </p> */}
             </div>
 

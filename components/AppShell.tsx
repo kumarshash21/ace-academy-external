@@ -154,7 +154,6 @@ import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation"; // Added usePathname
 import Link from "next/link";
 import logo from "../public/assets/img/GO_LOGO.jpg";
-import AceBot from "@/components/chatbot/AceBot";
 import { getSessionUid, isSessionExpired } from "@/lib/session";
 import { apiUrl } from "@/lib/api";
 import type { DoneRecord } from "@/lib/progress";
@@ -405,7 +404,6 @@ export default function AppShell({ children, currentTab }: AppShellProps) {
         </div>
       </div>
 
-      {user && <AceBot />}
     </div>
   );
 }

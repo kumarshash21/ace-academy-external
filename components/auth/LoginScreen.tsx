@@ -74,7 +74,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                 autoComplete="email"
               />
               <p style={{ marginTop: "6px", fontSize: "12px", color: "var(--text2)" }}>
-                GreyOrange organization email only (@greyorange.com)
+                GreyOrange or Dematic organization email only (@greyorange.com, @dematic.com)
               </p>
             </div>
             <PasswordField

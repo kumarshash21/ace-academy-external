@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import AceBot from "@/components/chatbot/AceBot";
 
 export default async function Home() {
   const htmlPath = path.join(process.cwd(), "index.html");
@@ -13,7 +12,6 @@ export default async function Home() {
         title="ACE Academy Legacy App"
         style={{ border: "none", height: "100%", width: "100%" }}
       />
-      <AceBot />
     </main>
   );
 }

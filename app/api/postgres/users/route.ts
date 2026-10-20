@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
     if (!isGreyOrangeEmail(email)) {
       return NextResponse.json(
-        { error: "Please use a GreyOrange organization email (@greyorange.com)." },
+        { error: "Please use a GreyOrange organization email (@greyorange.com or @dematic.com)." },
         { status: 400 }
       );
     }
