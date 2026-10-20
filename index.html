@@ -1416,14 +1416,7 @@ input,textarea,select{font-family:'Plus Jakarta Sans',sans-serif}
         </div>
         
         <select class="rank-team-select" id="rankTeamSelect" onchange="setRankTeam(this.value)">
-          <option value="TAC" selected>TAC</option>
-          <option value="Change Management">Change Management</option>
-          <option value="Client Director">Client Director</option>
-          <option value="CEM">CEM</option>
-          <option value="CAC">CAC</option>
-          <option value="IM">IM</option>
-          <option value="Project Manager">Project Manager</option>
-          <option value="Solution Integration">Solution Integration</option>
+          <option value="Dematic Learner" selected>Dematic Learner</option>
         </select>
 
         <div class="rank-cert-tabs" id="rankTeamProdTabs">
@@ -2841,7 +2834,7 @@ function rDash(){
 // ════════════════════════════════════════
 const RANK_STATE={
   org:  {prod:'rtp', lvl:'pathfinder'},
-  team: {prod:'rtp', lvl:'pathfinder', team:'TAC'}
+  team: {prod:'rtp', lvl:'pathfinder', team:'Dematic Learner'}
 };
 let RANK_USERS=null;        // cache of fetched users
 let RANK_TEAM_TOUCHED=false; // true once the user changes the team <select>
@@ -2963,10 +2956,10 @@ function setRankTeam(team){
 
 async function rRankings(){
   // Default the team card to the current user's team until they pick another.
-  if(!RANK_TEAM_TOUCHED && CU && CU.team){
+  const sel=document.getElementById('rankTeamSelect');
+  if(!RANK_TEAM_TOUCHED && CU && CU.team && sel && [...sel.options].some(o=>o.value===CU.team)){
     RANK_STATE.team.team=CU.team;
-    const sel=document.getElementById('rankTeamSelect');
-    if(sel) sel.value=CU.team;
+    sel.value=CU.team;
   }
   syncRankTabsUI('org');
   syncRankTabsUI('team');
