@@ -68,13 +68,13 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
               <input
                 id="loginEmail"
                 type="email"
-                placeholder="you@greyorange.com"
+                placeholder="you@dematic.com"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 autoComplete="email"
               />
               <p style={{ marginTop: "6px", fontSize: "12px", color: "var(--text2)" }}>
-                GreyOrange or Dematic organization email only (@greyorange.com, @dematic.com)
+                Please use your organization email only (@greyorange.com or dematic.com).
               </p>
             </div>
             <PasswordField

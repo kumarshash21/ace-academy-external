@@ -8,7 +8,7 @@ import { authProvider } from "@/lib/auth-provider";
 import { greyOrangeEmailErrorMessage, isGreyOrangeEmail, normalizeEmail } from "@/lib/email-validation";
 import PasswordField from "@/components/auth/PasswordField";
 import { apiUrl } from "@/lib/api";
-const TEAM_OPTIONS = ['Admin','Dematic Learner'];
+const TEAM_OPTIONS = ['Dematic Learner'];
 
 export default function SignupPage() {
   const router = useRouter();

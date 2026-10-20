@@ -64,9 +64,10 @@ export function getModuleCountForCert(
 export function getModulesInProgramFromSyllabus(team: string, syllabusByProduct: SyllabusByProduct): number {
   return PRODUCTS.reduce((total, product) => {
     const visibleCerts = getVisibleCerts(team, product.certs);
-    const fallbackPerCert = product.moduleCount;
+    // A product with no syllabus yet contributes 0 — the hardcoded legacy counts
+    // (applied per cert) used to inflate the total with modules that don't exist.
     const productTotal = visibleCerts.reduce(
-      (sum, cert) => sum + getModuleCountForCert(product.id, cert, syllabusByProduct, fallbackPerCert),
+      (sum, cert) => sum + getModuleCountForCert(product.id, cert, syllabusByProduct, 0),
       0
     );
     return total + productTotal;

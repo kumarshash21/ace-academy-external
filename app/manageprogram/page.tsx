@@ -7,7 +7,8 @@ import { apiUrl } from '@/lib/api';
 import { normalizeResourceUrl } from '@/lib/url';
 
 // Team options available when creating/editing a user (mirrors signup).
-const TEAM_OPTIONS = ['TAC', 'Change Management', 'Client Director', 'CEM', 'CAC', 'IM', 'Management', 'Project Manager', 'Solution Integration'];
+const TEAM_OPTIONS = ['Admin', 'Dematic Learner'];
+const FT_TEAM_OPTIONS = ['Dematic Learner'];
 
 // --- CONFIGURATION DEFINITIONS ---
 const PRODUCTS = [
@@ -222,7 +223,7 @@ export default function ManageProgram() {
   const [ftTopicModalMode, setFtTopicModalMode] = useState<'add' | 'edit'>('add');
   const [editingFtTopicId, setEditingFtTopicId] = useState<number | null>(null);
   const [ftTopicSaving, setFtTopicSaving] = useState(false);
-  const [ftTopicTeam, setFtTopicTeam] = useState(TEAM_OPTIONS[0]);
+  const [ftTopicTeam, setFtTopicTeam] = useState(FT_TEAM_OPTIONS[0]);
   const [ftTopicTitle, setFtTopicTitle] = useState('');
 
   // Module add/edit modal control
@@ -1006,6 +1007,26 @@ export default function ManageProgram() {
     }
   };
 
+  const handleRejectReset = async (id: string) => {
+    if (!window.confirm('Reject this password reset request? The user will need to submit a new one.')) return;
+    setResetBusyId(id);
+    try {
+      const response = await fetch(apiUrl('/api/postgres/password-resets'), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `Server responded with status ${response.status}`);
+      showAlert('Reset request rejected.', 'success');
+      await fetchResetRequests();
+    } catch (err: any) {
+      showAlert(`Failed to reject request: ${err.message}`, 'error');
+    } finally {
+      setResetBusyId(null);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'users') {
       fetchUsers();
@@ -1039,7 +1060,7 @@ export default function ManageProgram() {
     setUName(user.name);
     setUEmail(user.email);
     setUPassword('');
-    setUTeam(TEAM_OPTIONS.includes(user.team) ? user.team : TEAM_OPTIONS[0]);
+    setUTeam(user.team || TEAM_OPTIONS[0]);
     setURole(user.role);
     setIsUserModalOpen(true);
   };
@@ -1879,6 +1900,9 @@ export default function ManageProgram() {
                     <button className="btn-login" type="button" disabled={resetBusyId === r.id} onClick={() => handleResolveReset(r.id)} style={{ width: 'auto', padding: '8px 16px', marginTop: 0 }}>
                       {resetBusyId === r.id ? 'Saving...' : 'Set password'}
                     </button>
+                    <button className="btn-del" type="button" disabled={resetBusyId === r.id} onClick={() => handleRejectReset(r.id)} style={{ width: 'auto', padding: '8px 16px', marginTop: 0 }}>
+                      Reject
+                    </button>
                   </div>
                 ))}
               </div>
@@ -2046,7 +2070,7 @@ export default function ManageProgram() {
                   Team &rarr; Topic &rarr; Training link, shown on the learner-facing Functional Training page (scoped to each learner's own team).
                 </p>
 
-                {TEAM_OPTIONS.map(team => {
+                {FT_TEAM_OPTIONS.map(team => {
                   const teamTopics = ftTopics.filter(t => t.team === team);
                   return (
                     <div key={team} style={{ marginBottom: '28px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px' }}>
@@ -2523,6 +2547,31 @@ export default function ManageProgram() {
                   </div>
                 )}
 
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', color: 'var(--text2)' }}>Team</label>
+                    <select className="inp" style={{ width: '100%' }} value={uTeam} onChange={(e) => setUTeam(e.target.value)}>
+                      {(TEAM_OPTIONS.includes(uTeam) ? TEAM_OPTIONS : [uTeam, ...TEAM_OPTIONS]).map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', color: 'var(--text2)' }}>Role</label>
+                    <select
+                      className="inp"
+                      style={{ width: '100%' }}
+                      value={uRole}
+                      onChange={(e) => setURole(e.target.value as 'admin' | 'learner')}
+                      disabled={userModalMode === 'edit' && editingUid === sessionUid}
+                      title={userModalMode === 'edit' && editingUid === sessionUid ? 'You cannot change your own role' : undefined}
+                    >
+                      <option value="learner">◎ Learner</option>
+                      <option value="admin">⚙ Admin</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
                   <button type="button" className="btn-edit" onClick={() => setIsUserModalOpen(false)}>Cancel</button>
                   <button type="submit" className="btn-add" disabled={userSaving} style={{ backgroundColor: 'var(--purple)', borderColor: 'var(--purple)', color: '#fff', boxShadow: 'none', opacity: userSaving ? 0.6 : 1 }}>
@@ -2549,7 +2598,7 @@ export default function ManageProgram() {
                     onChange={(e) => setFtTopicTeam(e.target.value)}
                     style={{ background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid var(--border)', padding: '8px 10px', borderRadius: '4px', width: '100%' }}
                   >
-                    {TEAM_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                    {FT_TEAM_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
 

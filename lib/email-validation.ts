@@ -13,5 +13,5 @@ export function isGreyOrangeEmail(email: string): boolean {
 }
 
 export function greyOrangeEmailErrorMessage(): string {
-  return "Please use your GreyOrange organization email (@greyorange.com or @dematic.com).";
+  return "Please use your organization email only (@greyorange.com or dematic.com).";
 }

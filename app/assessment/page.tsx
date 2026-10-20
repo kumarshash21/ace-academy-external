@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { CertId } from "@/lib/academy-data";
-import { isLevelUnlocked } from "@/lib/assessment-mapping";
 import type { CertificationModule } from "@/lib/certifications";
 import { getSessionUid, syncSessionFromProfile } from "@/lib/session";
 import { fetchUserProfile } from "@/lib/user-profile";
@@ -27,9 +26,6 @@ const DEFAULT_LEVEL_SCHEMAS = [
 const TOOLS_LEVEL_SCHEMAS = [
   { id: "specialist", name: "Specialist", subtitle: "Core Tools & Methodology", icon: "🔧", cssClass: "tools-specialist" },
 ];
-
-// Tier order backing DEFAULT_LEVEL_SCHEMAS, used to compare against a user's allowedLevel.
-const LEVEL_ORDER = ["pathfinder", "navigator", "grandmaster"];
 
 interface Question {
   id?: string;
@@ -63,17 +59,9 @@ interface SavedProgress {
   savedAt: number;
 }
 
-function getModuleNameForTab(tabId: string): string | undefined {
-  return COURSE_TABS.find((tab) => tab.id === tabId)?.name;
-}
-
-// Same tab -> allowedLevel gating logic used to decide which level cards render,
-// reused so the metadata prefetch fetches exactly the levels that will be shown.
-function getLevelSchemasForTab(tabId: string, allowedLevel: number | undefined) {
-  if (tabId === "tools") return TOOLS_LEVEL_SCHEMAS;
-  return typeof allowedLevel === "number"
-    ? DEFAULT_LEVEL_SCHEMAS.filter((level) => LEVEL_ORDER.indexOf(level.id) < allowedLevel)
-    : DEFAULT_LEVEL_SCHEMAS;
+// Tools shows its single Specialist level; RTP/TTP/RIL show all three tiers.
+function getLevelSchemasForTab(tabId: string) {
+  return tabId === "tools" ? TOOLS_LEVEL_SCHEMAS : DEFAULT_LEVEL_SCHEMAS;
 }
 
 // Stable key for a question's answer. Prefers a real id from the quiz doc,
@@ -121,7 +109,6 @@ export default function AssessmentsPage() {
   const [metaLoaded, setMetaLoaded] = useState<Record<string, boolean>>({});
   const [activeLoadingLevel, setActiveLoadingLevel] = useState<string | null>(null);
   const [certifications, setCertifications] = useState<CertificationModule[]>([]);
-  const [allowedLevel, setAllowedLevel] = useState<number | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- Quiz Execution States ---
@@ -158,9 +145,6 @@ export default function AssessmentsPage() {
       if (profile?.certifications) {
         setCertifications(profile.certifications);
         syncSessionFromProfile(profile);
-      }
-      if (typeof profile?.allowedLevel === "number") {
-        setAllowedLevel(profile.allowedLevel);
       }
     });
   }, []);
@@ -304,9 +288,6 @@ const handleLevelClick = async (levelId: string) => {
         setCertifications(profile.certifications);
         syncSessionFromProfile(profile);
       }
-      if (typeof profile?.allowedLevel === "number") {
-        setAllowedLevel(profile.allowedLevel);
-      }
 
       const isPassed = payload.passed ?? finalScorePercent >= passThreshold;
       const savedScore = payload.newScore ?? finalScorePercent;
@@ -385,7 +366,7 @@ const handleLevelClick = async (levelId: string) => {
   // defaults until the user clicks a level.
   useEffect(() => {
     let cancelled = false;
-    const schemas = getLevelSchemasForTab(activeTabId, allowedLevel);
+    const schemas = getLevelSchemasForTab(activeTabId);
 
     schemas.forEach(async (level) => {
       const quizId = `${activeTabId}-${level.id}`;
@@ -411,7 +392,7 @@ const handleLevelClick = async (levelId: string) => {
     return () => {
       cancelled = true;
     };
-  }, [activeTabId, allowedLevel]);
+  }, [activeTabId]);
 
   const ModernSystemModal = ({ title, message, onConfirm, onCancel, confirmText = "OK", cancelText = "Cancel", isDestructive = false }: {
     title: string;
@@ -538,9 +519,7 @@ const handleLevelClick = async (levelId: string) => {
   }
 
   // Determine active level schemas dynamically depending on the current selected tab.
-  // Tools & Techniques is ungated by allowedLevel; RTP/TTP only show the tiers the
-  // user's team/persona is allowed to cover.
-  const activeLevelSchemas = getLevelSchemasForTab(activeTabId, allowedLevel);
+  const activeLevelSchemas = getLevelSchemasForTab(activeTabId);
 
   return (
     <AppShell currentTab="assessment">
@@ -582,18 +561,9 @@ const handleLevelClick = async (levelId: string) => {
         {activeLevelSchemas.map((level) => {
           const quizDetails = assessmentMeta[level.id];
           const isCurrentlyLoading = activeLoadingLevel === level.id;
-          const moduleName = getModuleNameForTab(activeTabId);
           
-          // Determine unlock rules dynamically
-
-          const isUnlocked = activeTabId === "tools" 
-  ? true // Automatically unlock the single-level specialist track
-  : (moduleName && certifications.length > 0 
-      ? isLevelUnlocked(certifications, moduleName, level.id as CertId) 
-      : level.id === "pathfinder");
-          // const isUnlocked = moduleName && certifications.length > 0 
-          //   ? isLevelUnlocked(certifications, moduleName, level.id as CertId) 
-          //   : level.id === "pathfinder" || level.id === "specialist";
+          // All levels are open: the sequential unlock gate is intentionally disabled.
+          const isUnlocked = true;
           
           const displayMinutes = quizDetails?.timeLimit ? Math.floor(quizDetails.timeLimit / 60) : 30;
           const displayPassPercent = quizDetails?.passingPercentage ?? 75;

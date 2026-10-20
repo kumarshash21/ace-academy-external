@@ -1227,7 +1227,7 @@ input,textarea,select{font-family:'Plus Jakarta Sans',sans-serif}
     </div>
     <div class="login-card">
       <div class="login-err" id="loginErr">Incorrect email or password. Please try again.</div>
-      <div class="field"><label>Email Address</label><input type="email" id="loginEmail" placeholder="you@greyorange.com" autocomplete="email"><p style="margin-top:6px;font-size:12px;color:var(--text2)">GreyOrange organization email only (@greyorange.com)</p></div>
+      <div class="field"><label>Email Address</label><input type="email" id="loginEmail" placeholder="you@greyorange.com" autocomplete="email"><p style="margin-top:6px;font-size:12px;color:var(--text2)">Please use your organization email only (@greyorange.com or dematic.com).</p></div>
       <div class="field">
         <label>Password</label>
         <div class="pwd-field">
@@ -1279,7 +1279,7 @@ input,textarea,select{font-family:'Plus Jakarta Sans',sans-serif}
         <div class="login-err" id="loginErr">⚠ Incorrect email or password. Please try again.</div>
         <div class="field">
           <label>Email Address</label>
-          <input type="email" id="loginEmail" placeholder="you@greyorange.com" autocomplete="email">
+          <input type="email" id="loginEmail" placeholder="you@dematic.com" autocomplete="email">
           <p style="margin-top:6px;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace"></p>
         </div>
         <div class="field">
@@ -2414,7 +2414,7 @@ function showLoginError(msg){
 }
 
 function isGreyOrangeEmail(email){
-  return /^[^\s@]+@greyorange\.com$/.test(String(email||'').trim().toLowerCase());
+  return /^[^\s@]+@(greyorange|dematic)\.com$/.test(String(email||'').trim().toLowerCase());
 }
 
 function toggleLoginPassword(){
@@ -2467,7 +2467,7 @@ async function doLogin(){
   document.getElementById('loginErr').style.display='none';
   if(!em||!pw){showLoginError('Please enter email and password.');return}
   if(!isGreyOrangeEmail(em)){
-    showLoginError('Please use your organization email only (@greyorange.com).');
+    showLoginError('Please use your organization email only (@greyorange.com or dematic.com).');
     return;
   }
 

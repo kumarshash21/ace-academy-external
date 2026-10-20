@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { DataClientError, dataRequest } from "@/lib/data-client";
+import { getSessionUser } from "@/lib/server-session";
 
 export async function GET(
   _request: Request,
@@ -42,6 +43,9 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ uid: string }> }
 ) {
+  const session = await getSessionUser();
+  if (session?.role !== "admin") return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+
   try {
     const { uid } = await params;
 
@@ -50,6 +54,10 @@ export async function PATCH(
     }
 
     const body = (await request.json()) as PatchBody;
+
+    if (body.role && uid === session.uid && body.role !== "admin") {
+      return NextResponse.json({ error: "You cannot remove your own admin role." }, { status: 400 });
+    }
 
     const hasValidField =
       (typeof body.name === "string" && body.name.trim()) ||

@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     }
     if (!isGreyOrangeEmail(email)) {
       return NextResponse.json(
-        { error: "Please use your organization email only (@greyorange.com or @dematic.com)." },
+        { error: "Please use your organization email only (@greyorange.com or dematic.com)." },
         { status: 400 }
       );
     }

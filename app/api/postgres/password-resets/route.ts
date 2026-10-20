@@ -38,3 +38,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unable to reset password." }, { status: 500 });
   }
 }
+
+/** Admin-only: DELETE { id } rejects (removes) a pending reset request without changing the password. */
+export async function DELETE(request: Request) {
+  const session = await getSessionUser();
+  if (session?.role !== "admin") return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+
+  const body = (await request.json().catch(() => ({}))) as { id?: string };
+  if (!body.id) return NextResponse.json({ error: "id is required." }, { status: 400 });
+  try {
+    await dataRequest(`/api/auth/reset-requests/${encodeURIComponent(body.id)}`, { method: "DELETE" });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    if (error instanceof DataClientError && error.status === 404) {
+      return NextResponse.json({ error: "Reset request not found." }, { status: 404 });
+    }
+    console.error("[password-resets]", error);
+    return NextResponse.json({ error: "Unable to reject reset request." }, { status: 500 });
+  }
+}
