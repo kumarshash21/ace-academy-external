@@ -26,4 +26,4 @@ pnpm-debug.log*
 /.config
 .env
 .env.local
-.env.production
+.env.productionnext-env.d.ts
