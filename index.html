@@ -1368,7 +1368,7 @@ input,textarea,select{font-family:'Plus Jakarta Sans',sans-serif}
         <div id="dashJourney"></div>
       </div> -->
       <div id="pg-dash">
-  <div class="dash-layout-grid">
+  <div class="dash-layout-grid" id="dashGrid">
     
     <div class="dash-left-content">
       <div class="ph">
@@ -1388,7 +1388,7 @@ input,textarea,select{font-family:'Plus Jakarta Sans',sans-serif}
       <div id="dashJourney"></div>
     </div>
 
-    <div class="dash-right-ranking">
+    <div class="dash-right-ranking" id="dashRanking">
       
       <div class="rank-card" data-tour="org-rank">
         <div class="rank-card-head">
@@ -2584,6 +2584,11 @@ function initApp(){
     document.getElementById('n-scores').style.display='flex';
     document.getElementById('n-userprogress').style.display='flex';
   }
+  // Org/Team rankings are admin-only
+  const isAdminUser=CU.role==='admin';
+  document.getElementById('dashRanking').style.display=isAdminUser?'':'none';
+  document.getElementById('dashGrid').style.gridTemplateColumns=isAdminUser?'':'1fr';
+  TOUR_STEPS=isAdminUser?ALL_TOUR_STEPS:ALL_TOUR_STEPS.filter(x=>x.sel!=='org-rank'&&x.sel!=='team-rank');
   goPage('dash');
   setTimeout(()=>startTour(),600);
 }
@@ -2591,7 +2596,7 @@ function initApp(){
 // ════════════════════════════════════════
 // ONBOARDING TOUR
 // ════════════════════════════════════════
-const TOUR_STEPS=[
+const ALL_TOUR_STEPS=[
   {t:'Welcome to ACE Academy 👋',d:'Take a 30-second tour of your dashboard. You can skip any time.'},
   {sel:'syllabus',t:'📘 Syllabus — start here',d:'This is where your learning begins. Open the Syllabus first and study the modules in order (e.g. 1.1 Platform &amp; Infrastructure). Mark each module as covered as you finish it — your progress is tracked from here.'},
   {sel:'assessment',t:'✎ Assessment — prove it',d:'Once you have covered the syllabus modules, take the Assessment for that level. It is timed, and you need to reach the pass mark to earn the certification.'},
@@ -2603,6 +2608,7 @@ const TOUR_STEPS=[
   {sel:'xp',t:'XP & streak',d:'Earn XP as you learn and keep your daily streak alive. You\'re all set — happy learning!'}
 ];
 
+let TOUR_STEPS=ALL_TOUR_STEPS;
 let tourIdx=0;
 function tourKey(){return 'ace2_tour_done_'+(CU&&CU.email?CU.email.toLowerCase():'anon')}
 function tourDone(){try{return localStorage.getItem(tourKey())==='1'}catch(_e){return false}}
